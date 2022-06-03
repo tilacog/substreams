@@ -331,6 +331,11 @@ func (p *Pipeline) returnOutputs(step bstream.StepType, cursor *bstream.Cursor, 
 			Cursor:  cursor.ToOpaque(),
 		}
 
+		if len(p.moduleOutputs) != 0 {
+			// we need the unique key based on hashes from OutputModules
+			// p.request.OutputModules
+		}
+
 		if err := respFunc(substreams.NewBlockScopedDataResponse(out)); err != nil {
 			return fmt.Errorf("calling return func: %w", err)
 		}

@@ -7,6 +7,7 @@ import (
 	"io"
 
 	"github.com/streamingfast/bstream/stream"
+	"github.com/streamingfast/bstream/transform"
 	"github.com/streamingfast/dstore"
 	"github.com/streamingfast/firehose"
 	firehoseServer "github.com/streamingfast/firehose/server"
@@ -173,14 +174,17 @@ func (s *Service) Blocks(request *pbsubstreams.Request, streamSrv pbsubstreams.S
 
 	pipe := pipeline.New(ctx, request, graph, s.blockType, s.baseStateStore, s.outputCacheSaveBlockInterval, s.wasmExtensions, s.grpcClientFactory, s.blockRangeSizeSubRequests, opts...)
 
+	indexHash := pipe.OutputModulesHash()
+
 	firehoseReq := &pbfirehose.Request{
 		StartBlockNum: request.StartBlockNum,
 		StopBlockNum:  request.StopBlockNum,
 		StartCursor:   request.StartCursor,
 		ForkSteps:     []pbfirehose.ForkStep{pbfirehose.ForkStep_STEP_IRREVERSIBLE}, //FIXME, should we support whatever is supported by the `request` here?
-
-		// ...FIXME ?
+		Transforms:    indexForOutputModules(indexHash),
 	}
+
+	bi := transform.NewBlockIndexer(indexStore, indexSize, indexHash) // we will use this indexer ...
 
 	responseHandler := func(resp *pbsubstreams.Response) error {
 		if err := streamSrv.Send(resp); err != nil {
