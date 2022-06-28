@@ -131,8 +131,7 @@ func (s *Service) Blocks(request *pbsubstreams.Request, streamSrv pbsubstreams.S
 		logger.Warn("cannot find hostname, using 'unknown'", zap.Error(err))
 		hostname = "unknown"
 	}
-	md := metadata.New(map[string]string{"host": hostname})
-	err = streamSrv.SendHeader(md)
+	err = streamSrv.SetHeader(metadata.New(map[string]string{"host": hostname}))
 	if err != nil {
 		logger.Warn("cannot send header metadata", zap.Error(err))
 	}
