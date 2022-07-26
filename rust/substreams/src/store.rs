@@ -49,20 +49,25 @@ impl StoreSetIfNotExists {
     }
 }
 
+pub trait StoreAddInt64 {
+    fn add(&self, ord: u64, key: String, value: i64);
+    fn add_many(&self, ord: u64, keys: &Vec<String>, value: i64);
+}
+
 /// StoreAddInt64 is a struct representing a `store` module with
 /// `updatePolicy` equal to `add` and a valueType of `int64`
 #[derive(StoreWriter)]
-pub struct StoreAddInt64 {}
-impl StoreAddInt64 {
+pub struct ExternStoreAddInt64 {}
+impl StoreAddInt64 for ExternStoreAddInt64 {
     /// Will add the value to the already present value at the key (or default to
     /// zero if the key was not set)
-    pub fn add(&self, ord: u64, key: String, value: i64) {
+    fn add(&self, ord: u64, key: String, value: i64) {
         state::add_int64(ord as i64, key, value);
     }
 
     /// Will add the value to the already present value of the keys (or default to
     /// zero if the key was not set)
-    pub fn add_many(&self, ord: u64, keys: &Vec<String>, value: i64) {
+    fn add_many(&self, ord: u64, keys: &Vec<String>, value: i64) {
         for key in keys {
             state::add_int64(ord as i64, key.to_string(), value);
         }
@@ -249,23 +254,31 @@ impl StoreAppend {
     }
 }
 
+pub trait StoreGet {
+    fn get_at(&self, ord: u64, key: &String) -> Option<Vec<u8>>;
+    fn get_last(&self, key: &String) -> Option<Vec<u8>>;
+    fn get_first(&self, key: &String) -> Option<Vec<u8>>;
+}
+
 /// StoreGet is a struct representing a read only store `store`
-pub struct StoreGet {
+pub struct ExternStoreGet {
     idx: u32,
 }
 
-impl StoreGet {
+impl ExternStoreGet {
     /// Return a StoreGet object with a store index set
-    pub fn new(idx: u32) -> StoreGet {
-        StoreGet { idx }
+    pub fn new(idx: u32) -> ExternStoreGet {
+        ExternStoreGet { idx }
     }
+}
 
+impl StoreGet for ExternStoreGet {
     /// Allows you to read a single key from the store. The type
     /// of its value can be anything, and is usually declared in
     /// the output section of the manifest. The ordinal is used here
     /// to go query a key that might have changed mid-block by
     /// the store module that built it.
-    pub fn get_at(&self, ord: u64, key: &String) -> Option<Vec<u8>> {
+    fn get_at(&self, ord: u64, key: &String) -> Option<Vec<u8>> {
         return state::get_at(self.idx, ord as i64, key);
     }
 
@@ -273,7 +286,7 @@ impl StoreGet {
     /// the store as of the beginning of the block being processed, before any changes
     /// were applied within the current block. Tt does not need to rewind any changes
     /// in the middle of the block.
-    pub fn get_last(&self, key: &String) -> Option<Vec<u8>> {
+    fn get_last(&self, key: &String) -> Option<Vec<u8>> {
         return state::get_last(self.idx, key);
     }
 
@@ -281,7 +294,7 @@ impl StoreGet {
     /// the store as of the beginning of the block being processed, before any changes
     /// were applied within the current block. However, it needs to unwind any keys that
     /// would have changed mid-block, so will be slightly less performant.
-    pub fn get_first(&self, key: &String) -> Option<Vec<u8>> {
+    fn get_first(&self, key: &String) -> Option<Vec<u8>> {
         return state::get_first(self.idx, key);
     }
 }

@@ -1,8 +1,6 @@
 extern crate wee_alloc;
 use std::convert::TryInto;
 use std::slice;
-use std::mem::{forget, MaybeUninit};
-use crate::log;
 
 /// Set the global allocator to the WebAssembly optimized one.
 // #[global_allocator]

@@ -61,7 +61,7 @@ pub use substreams_macro::map;
 /// # mod proto { pub type Custom = (); }
 ///
 /// #[substreams::handlers::store]
-/// fn build_nft_state(data: proto::Custom, s: store::StoreAddInt64, pairs: store::StoreGet, tokens: store::StoreGet) {
+/// fn build_nft_state(data: proto::Custom, s: store::StoreAddInt64, pairs: &impl store::StoreGet, tokens: &impl store::StoreGet) {
 ///     unimplemented!("do something");
 /// }
 /// ```
@@ -76,8 +76,8 @@ pub use substreams_macro::map;
 /// pub extern "C" fn build_nft_state(data_ptr: *mut u8, data_len: usize, pairs_idx: u32, tokens_idx: u32) {
 ///    substreams::register_panic_hook();
 ///    let data: proto::Custom = substreams::proto::decode_ptr(data_ptr, data_len).unwrap();
-///    let pairs: store::StoreGet = store::StoreGet::new(pairs_idx);
-///    let tokens: store::StoreGet = store::StoreGet::new(tokens_idx);
+///    let pairs: store::StoreGet = store::ExternStoreGet::new(pairs_idx);
+///    let tokens: store::StoreGet = store::ExternStoreGet::new(tokens_idx);
 ///    let s: store::StoreAddInt64 = store::StoreAddInt64::new();
 ///    {
 ///        unimplemented!("do something");

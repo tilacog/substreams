@@ -9,7 +9,7 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-substreams = { path = "/Users/cbillett/devel/sf/substreams/rust/substreams" }
+substreams = { path = "../substreams" }
 num-bigint = "0.4"
 bigdecimal = "0.3"
 prost = { version = "0.10.1" }
@@ -19,3 +19,6 @@ hex-literal = "0.3.4"
 
 [build-dependencies]
 prost-build = "0.10.1"
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3.0"

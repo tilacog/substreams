@@ -29,7 +29,9 @@ type Module struct {
 
 func (r *Runtime) NewModule(ctx context.Context, request *pbsubstreams.Request, wasmCode []byte, name string, entrypoint string) (*Module, error) {
 	//zeroRuntime := wazero.NewRuntime()
-	zeroRuntime := wazero.NewRuntimeWithConfig(wazero.NewRuntimeConfigCompiler())
+	config := wazero.NewRuntimeConfigCompiler()
+	config.WithWasmCore2().WithFeatureBulkMemoryOperations(true)
+	zeroRuntime := wazero.NewRuntimeWithConfig(config)
 
 	m := &Module{
 		runtime:     r,
