@@ -61,7 +61,7 @@ pub use substreams_macro::map;
 /// # mod proto { pub type Custom = (); }
 ///
 /// #[substreams::handlers::store]
-/// fn build_nft_state(data: proto::Custom, s: store::StoreAddInt64, pairs: &impl store::StoreGet, tokens: &impl store::StoreGet) {
+/// fn build_nft_state(data: proto::Custom, s: &impl store::StoreAddInt64, pairs: &impl store::StoreGet, tokens: &impl store::StoreGet) {
 ///     unimplemented!("do something");
 /// }
 /// ```

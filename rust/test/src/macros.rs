@@ -29,15 +29,12 @@ fn generate_key(holder: &[u8]) -> String {
 }
 
 #[substreams::handlers::store]
-#[precondition(false)]
 fn store_nfts(
     transfers: erc721::Transfers,
     pairs: &impl store::StoreGet,
     tokens: &impl store::StoreGet,
     output: &impl store::StoreAddInt64,
 ) {
-
-    // let p: &dyn store::StoreGet = &store::ExternStoreGet::new(1);
 
     let tokens_first_opt = tokens.get_first(&"tokens".to_owned());
     let pairs_last_opt = pairs.get_first(&"pairs".to_owned());
@@ -93,58 +90,4 @@ fn map_transfers(blk: eth::Block) -> Result<erc721::Transfers, errors::Error > {
         }));
     }
     return Ok(erc721::Transfers { transfers });
-}
-
-// pub struct TestStoreGet {
-// }
-//
-// impl StoreGet for TestStoreGet {
-//     fn get_at(&self, ord: u64, key: &String) -> Option<Vec<u8>> {
-//     }
-//
-//     fn get_last(&self, key: &String) -> Option<Vec<u8>> {
-//     }
-//
-//     fn get_first(&self, key: &String) -> Option<Vec<u8>> {
-//     }
-// }
-
-#[cfg(test)]
-mod tests {
-//     // Note this useful idiom: importing names from outer (for mod tests) scope.
-//     use super::*;
-//
-//
-//     impl StoreGet for ExternStoreGet {
-//         /// Allows you to read a single key from the store. The type
-//         /// of its value can be anything, and is usually declared in
-//         /// the output section of the manifest. The ordinal is used here
-//         /// to go query a key that might have changed mid-block by
-//         /// the store module that built it.
-//         fn get_at(&self, ord: u64, key: &String) -> Option<Vec<u8>> {
-//             return state::get_at(self.idx, ord as i64, key);
-//         }
-//
-//         /// Retrieves a key from the store, like `get_at`, but querying the state of
-//         /// the store as of the beginning of the block being processed, before any changes
-//         /// were applied within the current block. Tt does not need to rewind any changes
-//         /// in the middle of the block.
-//         fn get_last(&self, key: &String) -> Option<Vec<u8>> {
-//             return state::get_last(self.idx, key);
-//         }
-//
-//         /// Retrieves a key from the store, like `get_at`, but querying the state of
-//         /// the store as of the beginning of the block being processed, before any changes
-//         /// were applied within the current block. However, it needs to unwind any keys that
-//         /// would have changed mid-block, so will be slightly less performant.
-//         fn get_first(&self, key: &String) -> Option<Vec<u8>> {
-//             return state::get_first(self.idx, key);
-//         }
-//     }
-//
-//
-    #[test]
-    fn test_wtf() {
-        assert_eq!("wtf: 1", "toot");
-    }
 }

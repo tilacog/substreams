@@ -1,8 +1,6 @@
 
 use proc_macro::TokenStream;
 use std::borrow::Borrow;
-use std::fmt::format;
-use std::str::FromStr;
 use proc_macro2::{Span, TokenTree};
 use quote::{quote, ToTokens, format_ident};
 use syn::{spanned::Spanned, Type};
