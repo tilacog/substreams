@@ -25,6 +25,7 @@ func init() {
 
 	runCmd.Flags().StringP("output", "o", "", "Output mode. Defaults to 'ui' when in a TTY is present, and 'json' otherwise")
 	runCmd.Flags().BoolP("initial-snapshots", "i", false, "Fetch an initial snapshot at start block, before continuing processing.")
+	runCmd.Flags().Bool("no-cache", false, "Run the substreams with no cached output values.")
 
 	rootCmd.AddCommand(runCmd)
 }
@@ -42,6 +43,7 @@ func runRun(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
 	outputMode := mustGetString(cmd, "output")
+	cacheDisabled := mustGetBool(cmd, "no-cache")
 
 	manifestPath := args[0]
 	manifestReader := manifest.NewReader(manifestPath)
@@ -88,6 +90,7 @@ func runRun(cmd *cobra.Command, args []string) error {
 		ForkSteps:     []pbsubstreams.ForkStep{pbsubstreams.ForkStep_STEP_IRREVERSIBLE},
 		Modules:       pkg.Modules,
 		OutputModules: outputStreamNames,
+		CacheDisabled: cacheDisabled,
 	}
 	if mustGetBool(cmd, "initial-snapshots") {
 		for _, modName := range req.OutputModules {

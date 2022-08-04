@@ -350,7 +350,7 @@ func (p *Pipeline) runExecutor(executor ModuleExecutor, cursor string) error {
 	executorName := executor.Name()
 	zlog.Debug("executing", zap.String("module_name", executorName))
 
-	executionError := executor.run(p.wasmOutputs, p.clock, cursor)
+	executionError := executor.run(p.wasmOutputs, p.clock, p.request.CacheDisabled, cursor)
 
 	if p.isOutputModule(executorName) {
 		logs, truncated := executor.moduleLogs()
