@@ -281,7 +281,7 @@ func (c *OutputCache) ListCacheRanges(ctx context.Context) (block.Ranges, error)
 	var out block.Ranges
 	err := derr.RetryContext(ctx, 3, func(ctx context.Context) error {
 		if err := c.Store.Walk(ctx, "", func(filename string) (err error) {
-			r, err := fileNameToRange(filename)
+			r, err := FilenameToRange(filename)
 			if err != nil {
 				return fmt.Errorf("getting range from filename: %w", err)
 			}
@@ -328,7 +328,7 @@ func listContinuousCacheRanges(cachedRanges block.Ranges, from uint64) block.Ran
 	return out
 }
 
-func fileNameToRange(filename string) (*block.Range, error) {
+func FilenameToRange(filename string) (*block.Range, error) {
 	res := cacheFilenameRegex.FindAllStringSubmatch(filename, 1)
 	if len(res) != 1 {
 		return nil, fmt.Errorf("invalid output cache filename, %q", filename)

@@ -3,6 +3,7 @@ package orchestrator
 import (
 	"context"
 	"fmt"
+	"github.com/streamingfast/dstore"
 	"strings"
 	"sync"
 
@@ -29,6 +30,10 @@ func (s *StorageState) String() string {
 	return strings.Join(out, ", ")
 }
 
+func FetchStorageOutput(ctx context.Context, store dstore.Store) (out *Snapshots, err error) {
+	return listOutputSnapshots(ctx, store)
+}
+
 func FetchStorageState(ctx context.Context, stores map[string]*state.Store) (out *StorageState, err error) {
 	out = NewStorageState()
 	eg := llerrgroup.New(10)
@@ -40,7 +45,7 @@ func FetchStorageState(ctx context.Context, stores map[string]*state.Store) (out
 		objStore := store.Store
 		storeName := storeName
 		eg.Go(func() error {
-			snapshots, err := listSnapshots(ctx, objStore)
+			snapshots, err := listStoreSnapshots(ctx, objStore)
 			if err != nil {
 				return err
 			}

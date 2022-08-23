@@ -70,9 +70,6 @@ type Pipeline struct {
 	outputCacheSaveBlockInterval uint64
 	subrequestSplitSize          int
 	grpcClientFactory            substreams.GrpcClientFactory
-
-	cacheEnabled       bool
-	partialModeEnabled bool
 }
 
 func New(
@@ -134,19 +131,17 @@ func (p *Pipeline) Init(workerPool *orchestrator.WorkerPool) (err error) {
 		return fmt.Errorf("building pipeline: %w", err)
 	}
 
-	if p.cacheEnabled || p.partialModeEnabled { // always load/save/update cache when you are in partialMode
-		for _, module := range p.modules {
-			isOutput := p.outputModuleMap[module.Name]
+	for _, module := range p.modules {
+		isOutput := p.outputModuleMap[module.Name]
 
-			if isOutput && p.requestedStartBlockNum < module.InitialBlock {
-				return fmt.Errorf("invalid request: start block %d smaller that request outputs for module: %q start block %d", p.requestedStartBlockNum, module.Name, module.InitialBlock)
-			}
+		if isOutput && p.requestedStartBlockNum < module.InitialBlock {
+			return fmt.Errorf("invalid request: start block %d smaller that request outputs for module: %q start block %d", p.requestedStartBlockNum, module.Name, module.InitialBlock)
+		}
 
-			hash := manifest.HashModuleAsString(p.request.Modules, p.graph, module)
-			_, err := p.moduleOutputCache.RegisterModule(module, hash, p.baseStateStore)
-			if err != nil {
-				return fmt.Errorf("registering output cache for module %q: %w", module.Name, err)
-			}
+		hash := manifest.HashModuleAsString(p.request.Modules, p.graph, module)
+		_, err := p.moduleOutputCache.RegisterModule(module, hash, p.baseStateStore)
+		if err != nil {
+			return fmt.Errorf("registering output cache for module %q: %w", module.Name, err)
 		}
 	}
 
@@ -205,8 +200,6 @@ func (p *Pipeline) Init(workerPool *orchestrator.WorkerPool) (err error) {
 				return fmt.Errorf("send initial snapshots: %w", err)
 			}
 		}
-
-		p.partialModeEnabled = false
 	}
 
 	p.initStoreSaveBoundary()
@@ -216,12 +209,10 @@ func (p *Pipeline) Init(workerPool *orchestrator.WorkerPool) (err error) {
 		return fmt.Errorf("initiating module output caches: %w", err)
 	}
 
-	if p.cacheEnabled || p.partialModeEnabled { // always load cache when you are in partialMode
-		for _, cache := range p.moduleOutputCache.OutputCaches {
-			atBlock := outputs.ComputeStartBlock(p.requestedStartBlockNum, p.outputCacheSaveBlockInterval)
-			if _, err := cache.LoadAtBlock(ctx, atBlock); err != nil {
-				return fmt.Errorf("loading outputs caches")
-			}
+	for _, cache := range p.moduleOutputCache.OutputCaches {
+		atBlock := outputs.ComputeStartBlock(p.requestedStartBlockNum, p.outputCacheSaveBlockInterval)
+		if _, err := cache.LoadAtBlock(ctx, atBlock); err != nil {
+			return fmt.Errorf("loading outputs caches")
 		}
 	}
 
@@ -296,10 +287,8 @@ func (p *Pipeline) ProcessBlock(block *bstream.Block, obj interface{}) (err erro
 	}
 
 	if step == bstream.StepIrreversible {
-		if p.cacheEnabled || p.partialModeEnabled { // always load/save/update cache when you are in partialMode
-			if err = p.moduleOutputCache.Update(ctx, p.currentBlockRef); err != nil {
-				return fmt.Errorf("updating module output cache: %w", err)
-			}
+		if err = p.moduleOutputCache.Update(ctx, p.currentBlockRef); err != nil {
+			return fmt.Errorf("updating module output cache: %w", err)
 		}
 	}
 
@@ -331,13 +320,11 @@ func (p *Pipeline) ProcessBlock(block *bstream.Block, obj interface{}) (err erro
 	}
 
 	if isStopBlockReached(blockNum, p.request.StopBlockNum) {
-		if p.cacheEnabled || p.partialModeEnabled { // always load/save/update cache when you are in partialMode
-			zlog.Debug("about to save cache output", zap.Uint64("clock", blockNum), zap.Uint64("stop_block", p.request.StopBlockNum))
-			if err := p.moduleOutputCache.Flush(ctx); err != nil {
-				return fmt.Errorf("saving partial caches")
-			}
-			return io.EOF
+		zlog.Debug("about to save cache output", zap.Uint64("clock", blockNum), zap.Uint64("stop_block", p.request.StopBlockNum))
+		if err := p.moduleOutputCache.Flush(ctx); err != nil {
+			return fmt.Errorf("saving partial caches")
 		}
+		return io.EOF
 	}
 
 	if err = p.assignSource(block); err != nil {
@@ -394,7 +381,7 @@ func (p *Pipeline) runExecutor(ctx context.Context, executor ModuleExecutor, cur
 	executorName := executor.Name()
 	zlog.Debug("executing", zap.String("module_name", executorName))
 
-	err := executor.run(ctx, p.wasmOutputs, p.clock, p.cacheEnabled, p.partialModeEnabled, cursor)
+	err := executor.run(ctx, p.wasmOutputs, p.clock, cursor)
 	if err != nil {
 		logs, truncated := executor.moduleLogs()
 		outputData := executor.moduleOutputData()
@@ -642,9 +629,7 @@ func (p *Pipeline) buildWASM(ctx context.Context, request *pbsubstreams.Request,
 				isOutput:   isOutput,
 			}
 
-			if p.cacheEnabled || p.partialModeEnabled { // always load/save/update cache when you are in partialMode
-				baseExecutor.cache = p.moduleOutputCache.OutputCaches[module.Name]
-			}
+			baseExecutor.cache = p.moduleOutputCache.OutputCaches[module.Name]
 
 			executor := &MapperModuleExecutor{
 				BaseExecutor: baseExecutor,
@@ -677,9 +662,7 @@ func (p *Pipeline) buildWASM(ctx context.Context, request *pbsubstreams.Request,
 				wasmInputs: inputs,
 			}
 
-			if p.cacheEnabled || p.partialModeEnabled { // always load/save/update cache when you are in partialMode
-				baseExecutor.cache = p.moduleOutputCache.OutputCaches[module.Name]
-			}
+			baseExecutor.cache = p.moduleOutputCache.OutputCaches[module.Name]
 
 			s := &StoreModuleExecutor{
 				BaseExecutor: baseExecutor,

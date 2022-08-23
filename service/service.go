@@ -52,8 +52,6 @@ type Service struct {
 
 	parallelSubRequests       int
 	blockRangeSizeSubRequests int
-
-	cacheEnabled bool
 }
 
 func (s *Service) BaseStateStore() dstore.Store {
@@ -184,10 +182,6 @@ func (s *Service) Blocks(request *pbsubstreams.Request, streamSrv pbsubstreams.S
 
 	if s.storesSaveInterval != 0 {
 		opts = append(opts, pipeline.WithStoresSaveInterval(s.storesSaveInterval))
-	}
-
-	if s.cacheEnabled {
-		opts = append(opts, pipeline.WithCacheEnabled(true))
 	}
 
 	responseHandler := func(resp *pbsubstreams.Response) error {

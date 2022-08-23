@@ -45,7 +45,7 @@ type ModuleExecutor interface {
 	// Reset the wasm instance, avoid propagating logs.
 	Reset()
 
-	run(ctx context.Context, vals map[string][]byte, clock *pbsubstreams.Clock, cacheEnabled bool, partialModeEnabled bool, cursor string) error
+	run(ctx context.Context, vals map[string][]byte, clock *pbsubstreams.Clock, cursor string) error
 
 	moduleLogs() (logs []string, truncated bool)
 	moduleOutputData() pbsubstreams.ModuleOutputData
@@ -94,61 +94,53 @@ func (e *StoreModuleExecutor) String() string {
 	return e.moduleName
 }
 
-func (e *MapperModuleExecutor) run(ctx context.Context, vals map[string][]byte, clock *pbsubstreams.Clock, cacheEnabled bool, partialModeEnabled bool, cursor string) error {
-	if cacheEnabled || partialModeEnabled { // always get cache when you are in partialMode
-		output, found := e.cache.Get(clock)
-		if found {
-			e.mapperOutput = output
-			return nil
-		}
+func (e *MapperModuleExecutor) run(ctx context.Context, vals map[string][]byte, clock *pbsubstreams.Clock, cursor string) error {
+	output, found := e.cache.Get(clock)
+	if found {
+		e.mapperOutput = output
+		return nil
 	}
 
 	if err := e.wasmMapCall(ctx, vals, clock); err != nil {
 		return err
 	}
 
-	if cacheEnabled || partialModeEnabled { // always set cache when you are in partialMode
-		if err := e.cache.Set(clock, cursor, e.mapperOutput); err != nil {
-			return fmt.Errorf("setting mapper output to cache at block %d: %w", clock.Number, err)
-		}
+	if err := e.cache.Set(clock, cursor, e.mapperOutput); err != nil {
+		return fmt.Errorf("setting mapper output to cache at block %d: %w", clock.Number, err)
 	}
 
 	return nil
 }
 
-func (e *StoreModuleExecutor) run(ctx context.Context, vals map[string][]byte, clock *pbsubstreams.Clock, cacheEnabled bool, partialModeEnabled bool, cursor string) error {
-	if cacheEnabled || partialModeEnabled { // always get cache when you are in partialMode
-		output, found := e.cache.Get(clock)
+func (e *StoreModuleExecutor) run(ctx context.Context, vals map[string][]byte, clock *pbsubstreams.Clock, cursor string) error {
+	output, found := e.cache.Get(clock)
 
-		if found {
-			deltas := &pbsubstreams.StoreDeltas{}
-			err := proto.Unmarshal(output, deltas)
-			if err != nil {
-				return fmt.Errorf("unmarshalling output deltas: %w", err)
-			}
-			e.outputStore.Deltas = deltas.Deltas
-			for _, delta := range deltas.Deltas {
-				e.outputStore.ApplyDelta(delta)
-			}
-			return nil
+	if found {
+		deltas := &pbsubstreams.StoreDeltas{}
+		err := proto.Unmarshal(output, deltas)
+		if err != nil {
+			return fmt.Errorf("unmarshalling output deltas: %w", err)
 		}
+		e.outputStore.Deltas = deltas.Deltas
+		for _, delta := range deltas.Deltas {
+			e.outputStore.ApplyDelta(delta)
+		}
+		return nil
 	}
 
 	if err := e.wasmStoreCall(ctx, vals, clock); err != nil {
 		return err
 	}
 
-	if cacheEnabled || partialModeEnabled { // always set cache when you are in partialMode
-		deltas := &pbsubstreams.StoreDeltas{
-			Deltas: e.outputStore.Deltas,
-		}
-		data, err := proto.Marshal(deltas)
-		if err != nil {
-			return fmt.Errorf("caching: marshalling delta: %w", err)
-		}
-		if err = e.cache.Set(clock, cursor, data); err != nil {
-			return fmt.Errorf("setting delta to cache at block %d: %w", clock.Number, err)
-		}
+	deltas := &pbsubstreams.StoreDeltas{
+		Deltas: e.outputStore.Deltas,
+	}
+	data, err := proto.Marshal(deltas)
+	if err != nil {
+		return fmt.Errorf("caching: marshalling delta: %w", err)
+	}
+	if err = e.cache.Set(clock, cursor, data); err != nil {
+		return fmt.Errorf("setting delta to cache at block %d: %w", clock.Number, err)
 	}
 
 	return nil

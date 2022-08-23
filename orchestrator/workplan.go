@@ -77,7 +77,36 @@ func (w *WorkUnit) initialProcessedPartials() block.Ranges {
 	return w.partialsPresent.Merged()
 }
 
-func SplitWork(modName string, storeSaveInterval, modInitBlock, incomingReqStartBlock uint64, snapshots *Snapshots) *WorkUnit {
+func MapsSplitWork(modName string, saveInterval, requestStartBlock uint64, snapshots *Snapshots) *WorkUnit {
+	work := &WorkUnit{modName: modName}
+
+	completeSnapshot := snapshots.LastCompleteSnapshotBefore(requestStartBlock)
+
+	backProcessStartBlock := requestStartBlock
+	if completeSnapshot != nil {
+		backProcessStartBlock = completeSnapshot.ExclusiveEndBlock
+		work.initialStoreFile = block.NewRange(requestStartBlock, completeSnapshot.ExclusiveEndBlock)
+
+		if completeSnapshot.ExclusiveEndBlock == requestStartBlock {
+			return work
+		}
+	}
+
+	for ptr := backProcessStartBlock; ptr < requestStartBlock; {
+		end := minOf(ptr-ptr%saveInterval+saveInterval, requestStartBlock)
+		newPartial := block.NewRange(ptr, end)
+		if !snapshots.ContainsPartial(newPartial) {
+			work.partialsMissing = append(work.partialsMissing, newPartial)
+		} else {
+			work.partialsPresent = append(work.partialsPresent, newPartial)
+		}
+		ptr = end
+	}
+
+	return work
+}
+
+func StoresSplitWork(modName string, storeSaveInterval, modInitBlock, incomingReqStartBlock uint64, snapshots *Snapshots) *WorkUnit {
 	work := &WorkUnit{modName: modName}
 
 	if incomingReqStartBlock <= modInitBlock {

@@ -3,6 +3,7 @@ package orchestrator
 import (
 	"context"
 	"fmt"
+	"github.com/streamingfast/substreams/pipeline/outputs"
 	"sort"
 	"strings"
 
@@ -62,7 +63,37 @@ type Snapshot struct {
 	Path string
 }
 
-func listSnapshots(ctx context.Context, store dstore.Store) (*Snapshots, error) {
+func listOutputSnapshots(ctx context.Context, store dstore.Store) (*Snapshots, error) {
+	out := &Snapshots{}
+
+	err := derr.RetryContext(ctx, 3, func(ctx context.Context) error {
+		if err := store.Walk(ctx, "", func(filename string) (err error) {
+			if strings.HasPrefix(filename, "__") {
+				return nil
+			}
+
+			blockRanges, err := outputs.FilenameToRange(filename)
+			if err != nil {
+				return err
+			}
+
+			out.Completes = append(out.Completes, blockRanges)
+
+			return nil
+		}); err != nil {
+			return fmt.Errorf("walking snapshots: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	out.Sort()
+	return out, nil
+}
+
+func listStoreSnapshots(ctx context.Context, store dstore.Store) (*Snapshots, error) {
 	out := &Snapshots{}
 
 	err := derr.RetryContext(ctx, 3, func(ctx context.Context) error {

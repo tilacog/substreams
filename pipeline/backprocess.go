@@ -39,7 +39,17 @@ func (p *Pipeline) backProcessStores(
 		if !ok {
 			return nil, fmt.Errorf("fatal: storage state not reported for module name %q", mod.Name)
 		}
-		workPlan[mod.Name] = orchestrator.SplitWork(mod.Name, p.storeSaveInterval, mod.InitialBlock, uint64(p.request.StartBlockNum), snapshot)
+		workPlan[mod.Name] = orchestrator.StoresSplitWork(mod.Name, p.storeSaveInterval, mod.InitialBlock, uint64(p.request.StartBlockNum), snapshot)
+	}
+
+	for moduleName := range p.outputModuleMap {
+		if cache := p.moduleOutputCache.OutputCaches[moduleName]; cache != nil {
+			snapshot, err := orchestrator.FetchStorageOutput(ctx, cache.Store)
+			if err != nil {
+				return nil, fmt.Errorf("fetching snapshot %q: %w", cache.ModuleName, err)
+			}
+			workPlan[cache.ModuleName] = orchestrator.MapsSplitWork(cache.ModuleName, p.outputCacheSaveBlockInterval, uint64(p.request.StartBlockNum), snapshot)
+		}
 	}
 
 	zlog.Info("work plan ready", zap.Stringer("work_plan", workPlan))
